@@ -89,7 +89,7 @@ done
 if [ "$TESTNAME" != "" -a ! -e "$TESTNAME.in" ]; then
     die "test $TESTNAME does not exist"
 fi
-echo -e "\033[01;105m                     TESTING $task                    \033[00m"
+echo -e "\033[01;35m ------------------- TESTING $task ------------------- \033[00m"
 printed_to_stderr=0
 all_ok=1
 if [ "$QUIET" != "" ]; then
@@ -152,7 +152,7 @@ if [ $printed_to_stderr = 1 ]; then
     echo -e "\033[01;31mwarning: program printed into stderr\033[00m"
 fi
 if [ $all_ok = 1 ]; then
-    echo -e "\033[01;42m                        $task OK                      \033[00m"
+    echo -e "\033[01;32m --------------------- $task OK ---------------------- \033[00m"
 else
-    echo -e "\033[01;41m                       $task FAIL                     \033[00m"
+    echo -e "\033[01;31m -------------------- $task FAIL --------------------- \033[00m"
 fi
