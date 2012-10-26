@@ -1,0 +1,61 @@
+Sprawdzarka do zadań algorytmicznych, szczególnie pierwszego etapu OI
+i Piątkowych WWF.
+
+Sprawdzarkę wywołujemy bez argumentów w katalogu w którym znajduje się
+zadanie. Przykład:
+
+
+    $ ls
+    cen.cpp cen1.in cen1.out
+    $ ~/ocen/ocen
+     ------------------- TESTING cen -------------------
+    testing cen1... 0:00.01 ok
+     --------------------- cen OK ----------------------
+    $
+
+W razie potrzeby utworzy ona plik Makefile i skompiluje
+rozwiązanie. Domyślny limit czasu to 5 sekund, liczony według czasu
+procesora.
+
+Przykładowa organizacja plików
+------------------------------
+
+    ~/oi60
+    ├── .tasks
+    ├── cen
+    │   ├── cen1.in
+    │   ├── cen1.out
+    │   ├── Makefile
+    │   └── cen.cpp
+    └── usu
+        ├── cen1.in
+        ├── verify
+        ├── Makefile
+        └── cen.cpp
+
+Zadanie cen nie szerszego wymaga komentarza. Zostanie ono uruchomione
+na jednym teście (cen1.in) i wynik zostanie sprawdzony z cen1.out.
+
+Natomiast treść zadania usu umożliwia istnienie wielu
+rozwiązań. Dlatego zamiast korzystać z plików *.out, tworzymy plik
+verify. Musi być on wykonywalny i zwracać 0 jeżeli wynik jest poprawy,
+1 w przeciwnym wypadku. Jak parametry dostaje: nazwę pliku .out, nazwę
+pliku .in oraz nazwę pliku z wynikiem programu.
+Jako verify możena użyć np. skryptu w Pythonie lub skompilowany
+C++. Ważne, aby w przypadku języków skryptowych na początku umieścić
+shebang (patrz Wikipedia).
+
+Plik .tasks zawiera dwie linijki:
+  cen
+  usu
+
+Są to nazwy zadań, które chcemy testować. .tasks nie jest obowiązkowy,
+ale pozwala przetestować wszystki zadania za jednym razem:
+
+    $ cd ~/oi60
+    $ ~/ocen/ocen
+     ------------------- TESTING cen -------------------
+     --------------------- cen OK ----------------------
+     ------------------- TESTING usu -------------------
+     --------------------- tak OK ----------------------
+    $
