@@ -1,0 +1,143 @@
+#!/bin/bash
+die() {
+    echo -e '\033[01;31m'$1'\033[00m'
+    exit 1
+}
+
+trap exit SIGQUIT
+
+help() {
+    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all] [taskname]"
+}
+
+test_all() {
+    [ -e .tasks ] || die "file .tasks with task names doesn't exist"
+    for name in $(cat .tasks); do
+        ./ocen --quiet $name
+    done
+}
+
+while [ "$1" != "" ]; do
+    if [ "$1" = "--help" -o "$1" = '-h' ]; then
+        help
+        exit
+    elif [ "$1" = "--task-binary" ]; then
+        shift
+        export TASK_BINARY="$1"
+        shift
+    elif [ "$1" == "--test-name" ]; then
+        shift
+        export TESTNAME="$1"
+        shift
+    elif [ "$1" == "--quiet" ]; then
+        export QUIET=1
+        shift
+    elif [ "$1" == '--all' ]; then
+        test_all
+        exit
+    elif [ "$2" == "" ]; then
+        break # task name
+    else
+        echo -e "\033[01;31mbad option $1\033[00m"
+        help
+        exit
+    fi
+done
+
+base_dirname="$(basename $(pwd))"
+cd $(dirname $0)
+if [ "$1" != "" ]; then
+    task=$1
+else
+    task="$base_dirname"
+fi
+cd "$task" 2>/dev/null || die "no such task: $task"
+if [ ! -e Makefile ]; then
+	printf "%s: %s.cpp\n\tg++ %s.cpp -o %s -g -Wall\nocen: %s" $task $task $task $task > Makefile
+fi
+make "$task" CFLAGS=-DNDEBUG >/dev/null || die "compilation failed"
+if [ "$TASK_BINARY" != "" ]; then
+	[ -e $TASK_BINARY ] || die "task binary is not executable"
+	task_bin=$TASK_BINARY
+	echo -e '\033[01;31m'testing $task_bin'\033[00m'
+else
+	task_bin=$task
+fi
+ok=false
+for t in *.in; do
+	if [ -e "$t" ]; then
+		ok=true
+	fi
+done
+
+[ $ok = true ] || die "no tests found"
+if [ "$TESTNAME" != "" -a ! -e "$TESTNAME.in" ]; then
+    die "test $TESTNAME does not exist"
+fi
+echo -e "\033[01;105m                     TESTING $task                    \033[00m"
+printed_to_stderr=0
+all_ok=1
+if [ "$QUIET" != "" ]; then
+    quiet=1
+else
+    quiet=0
+fi
+for t in *.in; do
+        base=$(basename $t .in)
+        if [ "$TESTNAME" != "" -a "$TESTNAME" != "$base" ]; then
+            continue
+        fi
+        [ $quiet = 0 ] && printf "\033[01;37mtesting $base... \033[00m"
+        ulimit -S -t 5
+        /usr/bin/time -f %E sh -c "./$task_bin < $t > tmp 2>tmp.out" 2> tmp.time
+        ok=$?
+        ulimit -S -t 200
+        if [ $ok = 130 ]; then
+            echo -e '\033[01;31mcheck cancelled (to cancel everything press Ctrl-|)\033[00m'
+        fi
+        if [ $ok != 0 ]; then
+            if [ $quiet = 0 ]; then
+                echo -e '\033[01;31mfail (exit code '$ok')\033[00m'else
+            else
+                echo -e '\033[01;31mtest '$base' failed (exit code '$ok')\033[00m'
+            fi
+            all_ok=0
+            continue
+        fi
+	[ $quiet = 0 ] && printf "%s" "$(cat tmp.time)"
+        if [ ! -e $base.out -a ! -e verify ]; then
+            echo -e " \033[01;31moutput not found\033[00m"
+            continue
+        fi
+        if [ ! -e verify ]; then
+            diff -w tmp $base.out > tmp.diff # diff -bsq ?
+            ok=$?
+            [ $quiet = 0 ] && head -c 150 < tmp.diff > tmp.ver
+        else
+            ./verify $t tmp $base.out > tmp.ver
+            ok=$?
+        fi
+        if [ $ok = 0 ]; then
+            [ $quiet = 0 ] && echo -e ' \033[01;36mok\033[00m'
+        else
+            if [ $quiet = 0 ]; then
+                echo -e ' \033[01;31mfail\033[00m'
+            else
+                echo -e ' \033[01;31mtest '$base' failed\033[00m'
+            fi
+            all_ok=0
+            cat tmp.ver
+        fi
+
+        if [ "$(wc --bytes < tmp.out)" != 0 ]; then
+            printed_to_stderr=1
+        fi
+done
+if [ $printed_to_stderr = 1 ]; then
+    echo -e "\033[01;31mwarning: program printed into stderr\033[00m"
+fi
+if [ $all_ok = 1 ]; then
+    echo -e "\033[01;42m                        $task OK                      \033[00m"
+else
+    echo -e "\033[01;41m                       $task FAIL                     \033[00m"
+fi
