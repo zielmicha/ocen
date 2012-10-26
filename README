@@ -1,5 +1,5 @@
 Sprawdzarka do zadań algorytmicznych, szczególnie pierwszego etapu OI
-i Piątkowych WWF.
+i Piątkowych warsztatów.
 
 Sprawdzarkę wywołujemy bez argumentów w katalogu w którym znajduje się
 zadanie. Przykład:
@@ -13,9 +13,9 @@ zadanie. Przykład:
      --------------------- cen OK ----------------------
     $
 
-W razie potrzeby utworzy ona plik Makefile i skompiluje
-rozwiązanie. Domyślny limit czasu to 5 sekund, liczony według czasu
-procesora.
+W razie potrzeby utworzy plik Makefile i skompiluje
+rozwiązanie. Domyślny limit czasu pojedynczego testu to 5 sekund,
+liczony według czasu procesora.
 
 Przykładowa organizacja plików
 ------------------------------
@@ -33,21 +33,22 @@ Przykładowa organizacja plików
         ├── Makefile
         └── cen.cpp
 
-Zadanie cen nie szerszego wymaga komentarza. Zostanie ono uruchomione
+Zadanie cen nie wymaga szerszego komentarza. Zostanie ono uruchomione
 na jednym teście (cen1.in) i wynik zostanie sprawdzony z cen1.out.
 
 Natomiast treść zadania usu umożliwia istnienie wielu
 rozwiązań. Dlatego zamiast korzystać z plików *.out, tworzymy plik
 verify. Musi być on wykonywalny i zwracać 0 jeżeli wynik jest poprawy,
-1 w przeciwnym wypadku. Jak parametry dostaje: nazwę pliku .out, nazwę
+1 w przeciwnym wypadku. Jako parametry dostaje: nazwę pliku .out, nazwę
 pliku .in oraz nazwę pliku z wynikiem programu.
-Jako verify możena użyć np. skryptu w Pythonie lub skompilowany
+Jako verify można użyć np. skryptu w Pythonie lub skompilowany
 C++. Ważne, aby w przypadku języków skryptowych na początku umieścić
-shebang (patrz Wikipedia).
+[Shebang](http://pl.wikipedia.org/wiki/Shebang).
 
 Plik .tasks zawiera dwie linijki:
-  cen
-  usu
+
+    cen
+    usu
 
 Są to nazwy zadań, które chcemy testować. .tasks nie jest obowiązkowy,
 ale pozwala przetestować wszystki zadania za jednym razem:
@@ -59,3 +60,11 @@ ale pozwala przetestować wszystki zadania za jednym razem:
      ------------------- TESTING usu -------------------
      --------------------- tak OK ----------------------
     $
+
+Opcje
+----------------------
+
+`--task-binary nazwa` - testuje plik wykonywalny `nazwa`, zamiast
+pliku o nazwie takiej jak zadanie
+
+`--test-name nazwa` - testuje zadanie tylko na teście `nazwa`
