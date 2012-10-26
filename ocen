@@ -59,14 +59,14 @@ while [ "$1" != "" ]; do
     fi
 done
 
-base_dirname="$(basename $(pwd))"
-cd $(dirname $0)
+
 if [ "$1" != "" ]; then
-    task=$1
-else
-    task="$base_dirname"
+    cd $1 || die "cd $1 failed"
 fi
-cd "$task" 2>/dev/null || die "no such task: $task"
+task="$(basename $(pwd))"
+if [ ! -e "$task.cpp" ]; then
+    die "no task source file $task.cpp"
+fi
 if [ ! -e Makefile ]; then
 	printf "%s: %s.cpp\n\tg++ %s.cpp -o %s -g -Wall\nocen: %s" $task $task $task $task > Makefile
 fi
