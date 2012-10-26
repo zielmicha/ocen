@@ -47,9 +47,6 @@ while [ "$1" != "" ]; do
     elif [ "$1" == "--quiet" ]; then
         export QUIET=1
         shift
-    elif [ "$1" == '--all' ]; then
-        test_all
-        exit
     elif [ "$2" == "" ]; then
         break # task name
     else
@@ -59,12 +56,15 @@ while [ "$1" != "" ]; do
     fi
 done
 
-
 if [ "$1" != "" ]; then
     cd $1 || die "cd $1 failed"
 fi
 task="$(basename $(pwd))"
 if [ ! -e "$task.cpp" ]; then
+    if [ -e .tasks ]; then
+        test_all
+        exit
+    fi
     die "no task source file $task.cpp"
 fi
 if [ ! -e Makefile ]; then
