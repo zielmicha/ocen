@@ -97,22 +97,28 @@ if [ "$QUIET" != "" ]; then
 else
     quiet=0
 fi
+TIMEOUT=5
 for t in *.in; do
         base=$(basename $t .in)
         if [ "$TESTNAME" != "" -a "$TESTNAME" != "$base" ]; then
             continue
         fi
         [ $quiet = 0 ] && printf "\033[01;37mtesting $base... \033[00m"
-        ulimit -S -t 5
+        ulimit -S -t $TIMEOUT
         /usr/bin/time -f %E sh -c "./$task_bin < $t > tmp 2>tmp.out" 2> tmp.time
         ok=$?
         ulimit -S -t 200
         if [ $ok = 130 ]; then
             echo -e '\033[01;31mcheck cancelled (to cancel everything press Ctrl-|)\033[00m'
-        fi
-        if [ $ok != 0 ]; then
+            all_ok=0
+            continue
+        elif [ $ok = 152 ]; then
+            echo -e '\033[01;31mtimeout ('$TIMEOUT' s)\033[00m'
+            all_ok=0
+            continue
+        elif [ $ok != 0 ]; then
             if [ $quiet = 0 ]; then
-                echo -e '\033[01;31mfail (exit code '$ok')\033[00m'else
+                echo -e '\033[01;31mfail (exit code '$ok')\033[00m'
             else
                 echo -e '\033[01;31mtest '$base' failed (exit code '$ok')\033[00m'
             fi
