@@ -22,7 +22,7 @@ die() {
 trap exit SIGQUIT
 
 help() {
-    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all] [taskname]"
+    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all|--debug test-name] [taskname]"
 }
 
 test_all() {
@@ -46,6 +46,10 @@ while [ "$1" != "" ]; do
         shift
     elif [ "$1" == "--quiet" ]; then
         export QUIET=1
+        shift
+    elif [ "$1" == "--debug" ]; then
+        shift
+        export debug="$1"
         shift
     elif [ "$2" == "" ]; then
         break # task name
@@ -78,6 +82,12 @@ if [ "$TASK_BINARY" != "" ]; then
 else
 	task_bin=$task
 fi
+
+if [ "$debug" != "" ]; then
+    /usr/bin/time -f %E sh -c "./$task_bin ./$task_bin < $debug.in"
+    exit $?
+fi
+
 ok=false
 for t in *.in; do
 	if [ -e "$t" ]; then
@@ -109,11 +119,11 @@ for t in *.in; do
         ok=$?
         ulimit -S -t 200
         if [ $ok = 130 ]; then
-            echo -e '\033[01;31mcheck cancelled (to cancel everything press Ctrl-|)\033[00m'
-            all_ok=0
+            echo -e '\033[01;31mcancelled (to cancel everything press Ctrl-|)\033[00m'
+            all_ok=2
             continue
         elif [ $ok = 152 ]; then
-            echo -e '\033[01;31mtimeout ('$TIMEOUT' s)\033[00m'
+            echo -e '\033[01;31mfail (timeout '$TIMEOUT' s)\033[00m'
             all_ok=0
             continue
         elif [ $ok != 0 ]; then
@@ -128,6 +138,7 @@ for t in *.in; do
 	[ $quiet = 0 ] && printf "%s" "$(cat tmp.time)"
         if [ ! -e $base.out -a ! -e verify ]; then
             echo -e " \033[01;31moutput not found\033[00m"
+            all_ok=2
             continue
         fi
         if [ ! -e verify ]; then
@@ -157,7 +168,12 @@ done
 if [ $printed_to_stderr = 1 ]; then
     echo -e "\033[01;31mwarning: program printed into stderr\033[00m"
 fi
-if [ $all_ok = 1 ]; then
+if [ $all_ok = 1 -a "$TESTNAME" != "" ]; then
+    all_ok=2
+fi
+if [ $all_ok = 2 ]; then
+    echo -e "\033[01;33m ------------------ $task UNKNOWN -------------------- \033[00m"
+elif [ $all_ok = 1 ]; then
     echo -e "\033[01;32m --------------------- $task OK ---------------------- \033[00m"
 else
     echo -e "\033[01;31m -------------------- $task FAIL --------------------- \033[00m"
