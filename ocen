@@ -22,7 +22,7 @@ die() {
 trap exit SIGQUIT
 
 help() {
-    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all|--debug test-name] [taskname]"
+    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all|--debug test-name|--generate-out brut_binary] [taskname]"
 }
 
 test_all() {
@@ -51,6 +51,10 @@ while [ "$1" != "" ]; do
         shift
         export debug="$1"
         shift
+    elif [ "$1" == "--generate-out" ]; then
+	shift
+        export generate_out="$1"
+        shift
     elif [ "$2" == "" ]; then
         break # task name
     else
@@ -71,6 +75,28 @@ if [ ! -e "$task.cpp" ]; then
     fi
     die "no task source file $task.cpp"
 fi
+
+if [ "$generate_out" != "" ]; then
+    echo "generating missing outputs for $task using $generate_out..."
+    for t in *.in; do
+	base=$(basename $t .in)
+	if [ ! -e "$base.out" ]; then
+	    echo -n "$base.out... "
+	    /usr/bin/time -f %E sh -c "./$generate_out < $base.in > $base.out.tmp" 2> .tmp.time
+	    if [ $? = 0 ]; then
+		echo `cat .tmp.time` ok
+		mv $base.out.tmp $base.out
+	    else
+		echo fail
+		rm $base.out.tmp
+		exit
+	    fi
+	fi
+    done
+    echo 'done.'
+    exit
+fi
+
 if [ ! -e Makefile ]; then
 	printf "%s: %s.cpp\n\tg++ %s.cpp -o %s -g -Wall\nocen: %s" $task $task $task $task > Makefile
 fi
@@ -99,6 +125,7 @@ done
 if [ "$TESTNAME" != "" -a ! -e "$TESTNAME.in" ]; then
     die "test $TESTNAME does not exist"
 fi
+[ -x /usr/bin/time ] || die "/usr/bin/time doesn't exist (maybe apt-get install time ?)"
 echo -e "\033[01;35m ------------------- TESTING $task ------------------- \033[00m"
 printed_to_stderr=0
 all_ok=1
