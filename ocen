@@ -142,6 +142,7 @@ for t in *.in; do
         fi
         [ $quiet = 0 ] && printf "\033[01;37mtesting $base... \033[00m"
         ulimit -S -t $TIMEOUT
+	ulimit -s unlimited
         /usr/bin/time -f %E sh -c "./$task_bin < $t > tmp 2>tmp.out" 2> tmp.time
         ok=$?
         ulimit -S -t 200
