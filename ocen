@@ -52,7 +52,7 @@ while [ "$1" != "" ]; do
         export debug="$1"
         shift
     elif [ "$1" == "--generate-out" ]; then
-	shift
+	    shift
         export generate_out="$1"
         shift
     elif [ "$2" == "" ]; then
@@ -79,19 +79,19 @@ fi
 if [ "$generate_out" != "" ]; then
     echo "generating missing outputs for $task using $generate_out..."
     for t in *.in; do
-	base=$(basename $t .in)
-	if [ ! -e "$base.out" ]; then
-	    echo -n "$base.out... "
-	    /usr/bin/time -f %E sh -c "./$generate_out < $base.in > $base.out.tmp" 2> .tmp.time
-	    if [ $? = 0 ]; then
-		echo `cat .tmp.time` ok
-		mv $base.out.tmp $base.out
-	    else
-		echo fail
-		rm $base.out.tmp
-		exit
+	    base=$(basename $t .in)
+	    if [ ! -e "$base.out" ]; then
+	        echo -n "$base.out... "
+	        /usr/bin/time -f %E sh -c "./$generate_out < $base.in > $base.out.tmp" 2> .tmp.time
+	        if [ $? = 0 ]; then
+		        echo `cat .tmp.time` ok
+		        mv $base.out.tmp $base.out
+	        else
+		        echo fail
+		        rm $base.out.tmp
+		        exit
+	        fi
 	    fi
-	fi
     done
     echo 'done.'
     exit
@@ -102,7 +102,7 @@ if [ ! -e Makefile ]; then
 fi
 make "$task" CFLAGS=-DNDEBUG >/dev/null || die "compilation failed"
 if [ "$TASK_BINARY" != "" ]; then
-	[ -e $TASK_BINARY ] || die "task binary is not executable"
+	[ -x $TASK_BINARY ] || die "task binary is not executable"
 	task_bin=$TASK_BINARY
 	echo -e '\033[01;31m'testing $task_bin'\033[00m'
 else
@@ -136,62 +136,65 @@ else
 fi
 TIMEOUT=5
 for t in *.in; do
-        base=$(basename $t .in)
-        if [ "$TESTNAME" != "" -a "$TESTNAME" != "$base" ]; then
-            continue
-        fi
-        [ $quiet = 0 ] && printf "\033[01;37mtesting $base... \033[00m"
-        ulimit -S -t $TIMEOUT
+    base=$(basename $t .in)
+    if [ "$TESTNAME" != "" -a "$TESTNAME" != "$base" ]; then
+        continue
+    fi
+    [ $quiet = 0 ] && printf "\033[01;37mtesting $base... \033[00m"
+    ulimit -S -t $TIMEOUT
 	ulimit -s unlimited
-        /usr/bin/time -f %E sh -c "./$task_bin < $t > tmp 2>tmp.out" 2> tmp.time
-        ok=$?
-        ulimit -S -t 200
-        if [ $ok = 130 ]; then
-            echo -e '\033[01;31mcancelled (to cancel everything press Ctrl-|)\033[00m'
-            all_ok=2
-            continue
-        elif [ $ok = 152 ]; then
-            echo -e '\033[01;31mfail (timeout '$TIMEOUT' s)\033[00m'
-            all_ok=0
-            continue
-        elif [ $ok != 0 ]; then
-            if [ $quiet = 0 ]; then
-                echo -e '\033[01;31mfail (exit code '$ok')\033[00m'
-            else
-                echo -e '\033[01;31mtest '$base' failed (exit code '$ok')\033[00m'
-            fi
-            all_ok=0
-            continue
+    /usr/bin/time -f %E sh -c "./$task_bin < $t > tmp 2>tmp.out" 2> tmp.time
+    ok=$?
+    ulimit -S -t 200
+    if [ $ok = 130 ]; then
+        echo -e '\033[01;31mcancelled (to cancel everything press Ctrl-|)\033[00m'
+        all_ok=2
+        continue
+    elif [ $ok = 152 ]; then
+        echo -e '\033[01;31mfail (timeout '$TIMEOUT' s)\033[00m'
+        all_ok=0
+        failed=$(($failed+1))
+        continue
+    elif [ $ok != 0 ]; then
+        if [ $quiet = 0 ]; then
+            echo -e '\033[01;31mfail (exit code '$ok')\033[00m'
+        else
+            echo -e '\033[01;31mtest '$base' failed (exit code '$ok')\033[00m'
         fi
+        all_ok=0
+        failed=$(($failed+1))
+        continue
+    fi
 	[ $quiet = 0 ] && printf "%s" "$(cat tmp.time)"
-        if [ ! -e $base.out -a ! -e verify ]; then
-            echo -e " \033[01;31moutput not found\033[00m"
-            all_ok=2
-            continue
-        fi
-        if [ ! -e verify ]; then
-            diff -w tmp $base.out > tmp.diff # diff -bsq ?
-            ok=$?
-            [ $quiet = 0 ] && head -c 150 < tmp.diff > tmp.ver
+    if [ ! -e $base.out -a ! -e verify ]; then
+        echo -e " \033[01;31moutput not found\033[00m"
+        all_ok=2
+        continue
+    fi
+    if [ ! -e verify ]; then
+        diff -w tmp $base.out > tmp.diff # diff -bsq ?
+        ok=$?
+        [ $quiet = 0 ] && head -c 150 < tmp.diff > tmp.ver
+    else
+        ./verify $t tmp $base.out > tmp.ver
+        ok=$?
+    fi
+    if [ $ok = 0 ]; then
+        [ $quiet = 0 ] && echo -e ' \033[01;36mok\033[00m'
+    else
+        if [ $quiet = 0 ]; then
+            echo -e ' \033[01;31mfail\033[00m'
         else
-            ./verify $t tmp $base.out > tmp.ver
-            ok=$?
+            echo -e ' \033[01;31mtest '$base' failed\033[00m'
         fi
-        if [ $ok = 0 ]; then
-            [ $quiet = 0 ] && echo -e ' \033[01;36mok\033[00m'
-        else
-            if [ $quiet = 0 ]; then
-                echo -e ' \033[01;31mfail\033[00m'
-            else
-                echo -e ' \033[01;31mtest '$base' failed\033[00m'
-            fi
-            all_ok=0
-            cat tmp.ver
-        fi
+        all_ok=0
+        failed=$(($failed+1))
+        cat tmp.ver
+    fi
 
-        if [ "$(wc --bytes < tmp.out)" != 0 ]; then
-            printed_to_stderr=1
-        fi
+    if [ "$(wc --bytes < tmp.out)" != 0 ]; then
+        printed_to_stderr=1
+    fi
 done
 if [ $printed_to_stderr = 1 ]; then
     echo -e "\033[01;31mwarning: program printed into stderr\033[00m"
@@ -204,5 +207,6 @@ if [ $all_ok = 2 ]; then
 elif [ $all_ok = 1 ]; then
     echo -e "\033[01;32m --------------------- $task OK ---------------------- \033[00m"
 else
+    echo "$failed tests failed"
     echo -e "\033[01;31m -------------------- $task FAIL --------------------- \033[00m"
 fi
