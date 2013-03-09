@@ -19,10 +19,14 @@ die() {
     exit 1
 }
 
-trap exit SIGQUIT
+sigquit() {
+    die "SIGQUIT"
+}
+
+trap sigquit SIGQUIT
 
 help() {
-    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all|--debug test-name|--generate-out brut_binary] [taskname]"
+    echo "$0 [--help|--task-binary val|--test-name val|--quiet|--all|--debug test-name|--generate-out brut_binary|--test-names ...] [taskname]"
 }
 
 test_all() {
@@ -55,6 +59,14 @@ while [ "$1" != "" ]; do
 	    shift
         export generate_out="$1"
         shift
+    elif [ "$1" == "--test-names" ]; then
+        shift
+        testnames=""
+        while [ "$1" != "" ]; do
+            testnames="$testnames $1"
+            shift
+        done
+        break
     elif [ "$2" == "" ]; then
         break # task name
     else
@@ -98,7 +110,7 @@ if [ "$generate_out" != "" ]; then
 fi
 
 if [ ! -e Makefile ]; then
-	printf "%s: %s.cpp\n\tg++ %s.cpp -o %s -g -Wall\nocen: %s" $task $task $task $task > Makefile
+	printf "%s: %s.cpp\n\tg++ %s.cpp -o %s -g -Wall\nocen:\n\t%s\n" $task $task $task $task "$0" > Makefile
 fi
 make "$task" CFLAGS=-DNDEBUG >/dev/null || die "compilation failed"
 if [ "$TASK_BINARY" != "" ]; then
@@ -134,8 +146,11 @@ if [ "$QUIET" != "" ]; then
 else
     quiet=0
 fi
-TIMEOUT=5
-for t in *.in; do
+TIMEOUT=15
+if [ "$testnames" = "" ]; then
+    testnames=*.in
+fi
+for t in $testnames; do
     base=$(basename $t .in)
     if [ "$TESTNAME" != "" -a "$TESTNAME" != "$base" ]; then
         continue
