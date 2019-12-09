@@ -109,15 +109,16 @@ if [ "$generate_out" != "" ]; then
     exit
 fi
 
-if [ ! -e Makefile ]; then
-	printf "%s: %s.cpp\n\tg++ %s.cpp -o %s -g -Wall\nocen:\n\t%s\n" $task $task $task $task "$0" > Makefile
+if [ ! -e ocen.mk ]; then
+    printf "%s: %s.cpp\n\ti686-linux-gnu-g++ %s.cpp -Dlokalnie -m32 -o %s -std=c++11 -O3 -g -Wall\nocen:\n\t%s\n" $task $task $task $task "$0" > ocen.mk
 fi
-make "$task" CFLAGS=-DNDEBUG >/dev/null || die "compilation failed"
+
 if [ "$TASK_BINARY" != "" ]; then
 	[ -x $TASK_BINARY ] || die "task binary is not executable"
 	task_bin=$TASK_BINARY
 	echo -e '\033[01;31m'testing $task_bin'\033[00m'
 else
+    make -B -f ocen.mk "$task" >/dev/null || die "compilation failed"
 	task_bin=$task
 fi
 
@@ -147,6 +148,8 @@ else
     quiet=0
 fi
 TIMEOUT=15
+shopt -s globstar
+
 if [ "$testnames" = "" ]; then
     testnames=*.in
 fi
